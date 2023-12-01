@@ -29,6 +29,7 @@ gradle-app.setting
 **/.idea/**/usage.statistics.xml
 **/.idea/**/dictionaries
 **/.idea/**/shelf
+**/.idea/vcs.xml
 
 # AWS User-specific
 **/.idea/**/aws.xml
@@ -85,6 +86,7 @@ atlassian-ide-plugin.xml
 
 # SonarLint plugin
 **/.idea/sonarlint/
+**/.idea/sonarlint.xml
 
 # Crashlytics plugin (for Android Studio and IntelliJ)
 com_crashlytics_export_strings.xml

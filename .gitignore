@@ -30,6 +30,8 @@ gradle-app.setting
 **/.idea/**/dictionaries
 **/.idea/**/shelf
 **/.idea/vcs.xml
+**/.idea/discord.xml
+**/.idea/misc.xml
 
 # AWS User-specific
 **/.idea/**/aws.xml

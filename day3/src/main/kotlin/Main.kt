@@ -1,7 +1,7 @@
 import java.io.File
 
 fun main(args: Array<String>) {
-    println("------ Advent of Code 2023 - Day 2 -----")
+    println("------ Advent of Code 2023 - Day 3 -----")
 
     val engineSchematic = if (args.isEmpty()) getPuzzleInput() else args.toList()
     val validNumbers = getValidNumbers(engineSchematic)

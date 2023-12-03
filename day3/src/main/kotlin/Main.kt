@@ -1,7 +1,5 @@
 import java.io.File
 
-val symbols = setOf('*', '#', '+', '$', '/', '@')
-
 fun main(args: Array<String>) {
     println("------ Advent of Code 2023 - Day 2 -----")
 
@@ -59,7 +57,7 @@ fun getSumOfAllGearRatios(schematic: List<String>): Int {
     // 2. Find all actual gears
     val gears = mutableListOf<Gear>()
     for ((x, y) in gearPositions) {
-        var adjacentGears = findAdjacentNumbers(schematic, x, y)
+        val adjacentGears = findAdjacentNumbers(schematic, x, y)
         if (adjacentGears.size == 2)
             gears.add(Gear(adjacentGears[0], adjacentGears[1]))
     }
@@ -77,13 +75,16 @@ fun findAdjacentNumbers(schematic: List<String>, x: Int, y: Int): List<Int> {
     if (schematic[y][xLeft].isDigit()) {
         adjacentNumbers.add(getFullNumber(schematic, xLeft, y))
     }
+
     // find potential right number
     if (schematic[y][xRight].isDigit()) {
         adjacentNumbers.add(getFullNumber(schematic, xRight, y))
     }
+
     // find potential top numbers
     val topNumbers = findNumbersInRow(schematic, xLeft, xRight, y + 1)
     adjacentNumbers.addAll(topNumbers)
+
     // find potential bottom numbers
     val bottomNumbers = findNumbersInRow(schematic, xLeft, xRight, y - 1)
     adjacentNumbers.addAll(bottomNumbers)
@@ -101,22 +102,7 @@ fun findNumbersInRow(schematic: List<String>, xLeft: Int, xRight: Int, y: Int): 
 
     // check if potential middle number exists
     if ((xRight - xLeft > 1) && schematic[y][xLeft + 1].isDigit()) {
-        var middleNumber = schematic[y][xLeft + 1].toString()
-        var dX = xRight
-        while (dX < schematic[y].length) {
-            if (schematic[y][dX].isDigit()) {
-                middleNumber += schematic[y][dX]
-                dX++
-            } else break
-        }
-        dX = xLeft
-        while (dX >= 0) {
-            if (schematic[y][dX].isDigit()) {
-                middleNumber = schematic[y][dX] + middleNumber
-                dX--
-            } else break
-        }
-        numbers.add(middleNumber.toInt())
+        numbers.add(getMiddleNumber(schematic, y, xLeft, xRight))
     } else {
         // check if potential left number exists
         if (schematic[y][xLeft].isDigit()) {
@@ -131,6 +117,28 @@ fun findNumbersInRow(schematic: List<String>, xLeft: Int, xRight: Int, y: Int): 
     return numbers
 }
 
+private fun getMiddleNumber(schematic: List<String>, y: Int, xLeft: Int, xRight: Int, ) : Int {
+    var middleNumber = schematic[y][xLeft + 1].toString()
+    var dX = xRight
+
+    while (dX < schematic[y].length) {
+        if (schematic[y][dX].isDigit()) {
+            middleNumber += schematic[y][dX]
+            dX++
+        } else break
+    }
+
+    dX = xLeft
+    while (dX >= 0) {
+        if (schematic[y][dX].isDigit()) {
+            middleNumber = schematic[y][dX] + middleNumber
+            dX--
+        } else break
+    }
+
+    return middleNumber.toInt()
+}
+
 fun getFullNumber(schematic: List<String>, x: Int, y: Int): Int {
     var number = schematic[y][x].toString()
 
@@ -141,6 +149,7 @@ fun getFullNumber(schematic: List<String>, x: Int, y: Int): Int {
             dX++
         } else break
     }
+
     dX = x
     while (dX - 1 >= 0) {
         if (schematic[y][dX - 1].isDigit()) {

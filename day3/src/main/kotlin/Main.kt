@@ -1,6 +1,6 @@
 import java.io.File
 
-val symbols = setOf('*', '#', '+', '$')
+val symbols = setOf('*', '#', '+', '$', '/', '@')
 
 fun main(args: Array<String>) {
     println("------ Advent of Code 2023 - Day 2 -----")
@@ -10,7 +10,7 @@ fun main(args: Array<String>) {
 
 
     println("Task 1: Sum of all valid numbers: ${validNumbers.sumOf { it.first }}")
-
+    println("Task 2: Sum of all gear ratios: ${getSumOfAllGearRatios(engineSchematic)}")
 
     println("----------------------------------------")
 }
@@ -44,6 +44,114 @@ fun getValidNumbers(engineSchematic: List<String>): MutableList<Pair<Int, Pair<I
     return validNumbers
 }
 
+fun getSumOfAllGearRatios(schematic: List<String>): Int {
+    val gearPositions = mutableListOf<Pair<Int, Int>>()
+
+    // 1. Find all potential gear positions
+    for (y in schematic.indices) {
+        for (x in schematic[y].indices) {
+            if (schematic[y][x] == '*') {
+                gearPositions.add(x to y)
+            }
+        }
+    }
+
+    // 2. Find all actual gears
+    val gears = mutableListOf<Gear>()
+    for ((x, y) in gearPositions) {
+        var adjacentGears = findAdjacentNumbers(schematic, x, y)
+        if (adjacentGears.size == 2)
+            gears.add(Gear(adjacentGears[0], adjacentGears[1]))
+    }
+
+    // 3. Calculate the sum of all gear ratios
+    return gears.sumOf { it.ratio }
+}
+
+fun findAdjacentNumbers(schematic: List<String>, x: Int, y: Int): List<Int> {
+    val adjacentNumbers = mutableListOf<Int>()
+    val xLeft = if (x - 1 >= 0) x - 1 else x
+    val xRight = if (x + 1 < schematic[y].length) x + 1 else x
+
+    // find potential left number
+    if (schematic[y][xLeft].isDigit()) {
+        adjacentNumbers.add(getFullNumber(schematic, xLeft, y))
+    }
+    // find potential right number
+    if (schematic[y][xRight].isDigit()) {
+        adjacentNumbers.add(getFullNumber(schematic, xRight, y))
+    }
+    // find potential top numbers
+    val topNumbers = findNumbersInRow(schematic, xLeft, xRight, y + 1)
+    adjacentNumbers.addAll(topNumbers)
+    // find potential bottom numbers
+    val bottomNumbers = findNumbersInRow(schematic, xLeft, xRight, y - 1)
+    adjacentNumbers.addAll(bottomNumbers)
+
+    return adjacentNumbers
+}
+
+fun findNumbersInRow(schematic: List<String>, xLeft: Int, xRight: Int, y: Int): List<Int> {
+    val numbers = mutableListOf<Int>()
+
+    // check if the row exists
+    if (y !in schematic.indices) {
+        return numbers
+    }
+
+    // check if potential middle number exists
+    if ((xRight - xLeft > 1) && schematic[y][xLeft + 1].isDigit()) {
+        var middleNumber = schematic[y][xLeft + 1].toString()
+        var dX = xRight
+        while (dX < schematic[y].length) {
+            if (schematic[y][dX].isDigit()) {
+                middleNumber += schematic[y][dX]
+                dX++
+            } else break
+        }
+        dX = xLeft
+        while (dX >= 0) {
+            if (schematic[y][dX].isDigit()) {
+                middleNumber = schematic[y][dX] + middleNumber
+                dX--
+            } else break
+        }
+        numbers.add(middleNumber.toInt())
+    } else {
+        // check if potential left number exists
+        if (schematic[y][xLeft].isDigit()) {
+            numbers.add(getFullNumber(schematic, xLeft, y))
+        }
+        // check if potential right number exists
+        if (schematic[y][xRight].isDigit()) {
+            numbers.add(getFullNumber(schematic, xRight, y))
+        }
+    }
+
+    return numbers
+}
+
+fun getFullNumber(schematic: List<String>, x: Int, y: Int): Int {
+    var number = schematic[y][x].toString()
+
+    var dX = x
+    while (dX + 1 < schematic[y].length) {
+        if (schematic[y][dX + 1].isDigit()) {
+            number += schematic[y][dX + 1]
+            dX++
+        } else break
+    }
+    dX = x
+    while (dX - 1 >= 0) {
+        if (schematic[y][dX - 1].isDigit()) {
+            number = schematic[y][dX - 1] + number
+            dX--
+        } else break
+    }
+
+    return number.toInt()
+}
+
 fun completeNumberAndGetLastIndex(schematic: List<String>, x: Int, y: Int): Pair<Int, Int> {
     var x1 = x
     var number = schematic[y][x].toString()
@@ -63,11 +171,11 @@ fun isValidNumber(schematic: List<String>, x: Int, y: Int): Boolean {
     val xLast = getNumberLastPosition(schematic[y], x) + 1
 
     // Check if there is a symbol before the number
-    if ((xFirst >= 0) && isSymbol(schematic[y][xFirst])) {
+    if ((xFirst >= 0) && isValidSymbol(schematic[y][xFirst])) {
         return true
     }
     // Check if there is a symbol after the number
-    if ((xLast < schematic[y].length) && isSymbol(schematic[y][xLast])) {
+    if ((xLast < schematic[y].length) && isValidSymbol(schematic[y][xLast])) {
         return true
     }
     // Check if there is a symbol above the number
@@ -96,7 +204,7 @@ fun getNumberLastPosition(line: String, x: Int): Int {
 
 fun areaContainsSymbol(line: String, xFirst: Int, xLast: Int): Boolean {
     for (x in xFirst..xLast) {
-        if ((x in line.indices) && isSymbol(line[x])) {
+        if ((x in line.indices) && isValidSymbol(line[x])) {
             return true
         }
     }
@@ -104,8 +212,12 @@ fun areaContainsSymbol(line: String, xFirst: Int, xLast: Int): Boolean {
     return false
 }
 
-fun isSymbol(symbol: Char): Boolean {
-    return symbols.contains(symbol)
+fun isValidSymbol(symbol: Char): Boolean {
+    return symbol != '.'
+}
+
+data class Gear(val number1: Int, val number2: Int) {
+    val ratio = number1 * number2
 }
 
 fun getPuzzleInput(): List<String> {

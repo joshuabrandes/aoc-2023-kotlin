@@ -1,5 +1,4 @@
 import java.io.File
-import java.util.*
 import kotlin.collections.HashMap
 
 fun main() {
@@ -19,29 +18,18 @@ fun main() {
 
 fun getCardsWithNewRules(cards: List<Card>): List<Long> {
     val copies = HashMap<Int, Int>()
-    val queue: Queue<Int> = LinkedList()
 
     // Initialisiere die HashMap mit einer Kopie für jede ursprüngliche Karte
     cards.indices.forEach { copies[it] = 1 }
 
-    // initialisiere die Queue mit der ersten Karte
-    cards.forEachIndexed { index, card ->
-        if (card.winningNumberCount > 0) {
-            queue.add(index)
-        }
-    }
-
-    while (queue.isNotEmpty()) {
-        val cardIndex = queue.remove()
-        val cardCopies = copies[cardIndex] ?: continue
-        val matches = cards[cardIndex].winningNumberCount
-
-        // Füge Kopien der nachfolgenden Karten hinzu
-        for (i in 1..matches) {
-            val nextCardIndex = cardIndex + i
-            if (nextCardIndex < cards.size) {
-                copies[nextCardIndex] = (copies[nextCardIndex] ?: 0) + cardCopies
-                queue.add(nextCardIndex)
+    for (card in cards) {
+        val matches = card.winningNumberCount
+        if (matches == 0) {
+            continue
+        } else {
+            val index = card.number - 1
+            for (i in 1..matches) {
+                copies[index + i] = copies.getOrDefault(index + i, 0) + copies[index]!!
             }
         }
     }
@@ -58,7 +46,6 @@ data class Card(
     val number: Int,
     val winningNumbers: List<Int>,
     val chosenNumbers: List<Int>,
-    var isProcessed: Boolean = false
 ) {
 
     val winningNumberCount: Int

@@ -1,5 +1,6 @@
 import java.io.File
 import java.util.*
+import kotlin.collections.HashMap
 
 fun main() {
     println("------ Advent of Code 2023 - Day 4 -----")
@@ -17,26 +18,35 @@ fun main() {
 }
 
 fun getCardsWithNewRules(cards: List<Card>): List<Long> {
-        val copies = MutableList(cards.size) { 1 }
-        val queue : Queue<Int> = LinkedList()
+    val copies = HashMap<Int, Int>()
+    val queue: Queue<Int> = LinkedList()
 
-    // init queue with original indexes
-    cards.forEachIndexed { index, _ -> queue.add(index) }
+    // Initialisiere die HashMap mit einer Kopie für jede ursprüngliche Karte
+    cards.indices.forEach { copies[it] = 1 }
+
+    // initialisiere die Queue mit der ersten Karte
+    cards.forEachIndexed { index, card ->
+        if (card.winningNumberCount > 0) {
+            queue.add(index)
+        }
+    }
 
     while (queue.isNotEmpty()) {
         val cardIndex = queue.remove()
+        val cardCopies = copies[cardIndex] ?: continue
         val matches = cards[cardIndex].winningNumberCount
 
+        // Füge Kopien der nachfolgenden Karten hinzu
         for (i in 1..matches) {
-            val copyIndex = cardIndex + i
-            if (copyIndex < cards.size) {
-                queue.add(copyIndex)
-                copies[copyIndex] += copies[cardIndex]
+            val nextCardIndex = cardIndex + i
+            if (nextCardIndex < cards.size) {
+                copies[nextCardIndex] = (copies[nextCardIndex] ?: 0) + cardCopies
+                queue.add(nextCardIndex)
             }
         }
     }
 
-    return copies.map { it.toLong() }
+    return copies.values.map { it.toLong() }
 }
 
 fun getPuzzleInput(): List<String> {

@@ -1,7 +1,7 @@
 import java.io.File
 
 fun main() {
-    println("------ Advent of Code 2023 - Day  -----")
+    println("------ Advent of Code 2023 - Day 6 -----")
 
     val puzzleInput = getPuzzleInput()
     val races = getRaces(puzzleInput)

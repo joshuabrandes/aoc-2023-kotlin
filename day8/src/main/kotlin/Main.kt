@@ -21,12 +21,13 @@ fun shortestPathForGhosts(
     end: String,
     instructions: List<Char>,
     nodes: List<Node>,
+    withLogging: Boolean = false
 ): Long {
     val startNodes = nodes.filter { it.name.endsWith(start) }.map { it.name }.toSet()
     val nodeMap = nodes.associateBy { it.name }
 
     val allSteps = startNodes
-        .map { stepsFromTo(it, { node -> node.name.endsWith(end) }, instructions, nodeMap) }
+        .map { stepsFromTo(it, { node -> node.name.endsWith(end) }, instructions, nodeMap, withLogging) }
         .lcm()
 
     return allSteps
@@ -44,9 +45,8 @@ fun stepsFromTo(
 
     while (true) {
         for (instruction in instructions) {
-            if (withLogging) println("Step $steps: $currentNode")
-
             if (isEndNode(currentNode)) {
+                if (withLogging) println("Step $steps: $currentNode")
                 return steps
             }
             currentNode = when (instruction) {

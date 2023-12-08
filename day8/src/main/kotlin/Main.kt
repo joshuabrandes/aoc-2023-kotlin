@@ -5,7 +5,7 @@ fun main() {
 
     val puzzleInput = getPuzzleInput()
     val (instructions, nodes) = getInstructionsAndNodes(puzzleInput)
-    val stepsFromAAAToZZZ = stepsFromTo("AAA", "ZZZ", instructions, nodes)
+    val stepsFromAAAToZZZ = stepsFromTo("AAA", { it.name == "ZZZ" }, instructions, nodes.associateBy { it.name })
 
     println("Part 1: Steps from AAA to ZZZ: $stepsFromAAAToZZZ")
 
@@ -21,56 +21,32 @@ fun shortestPathForGhosts(
     end: String,
     instructions: List<Char>,
     nodes: List<Node>,
-    withLogging: Boolean = false
-): Any {
+): Long {
     val startNodes = nodes.filter { it.name.endsWith(start) }.map { it.name }.toSet()
-    val endNodes = nodes.filter { it.name.endsWith(end) }.map { it.name }.toSet()
     val nodeMap = nodes.associateBy { it.name }
 
-    var currentNodes = startNodes
-    var steps = 0
+    val allSteps = startNodes
+        .map { stepsFromTo(it, { node -> node.name.endsWith(end) }, instructions, nodeMap) }
+        .lcm()
 
-    while (true) {
-        for (instruction in instructions) {
-            if (withLogging) println("Step $steps: $startNodes")
-            if (currentNodes.all { it in endNodes }) {
-                println("Reached $currentNodes after $steps steps")
-                return steps
-            }
-
-            currentNodes = currentNodes
-                .map { nodeMap[it]!! }
-                .map {
-                    when (instruction) {
-                        'L' -> nodeMap[it.left]!!
-                        'R' -> nodeMap[it.right]!!
-                        else -> error("Unknown instruction: $instruction")
-                    }
-                }
-                .map { it.name }
-                .toSet()
-
-            steps++
-        }
-    }
+    return allSteps
 }
 
 fun stepsFromTo(
     startNode: String,
-    endNode: String,
+    isEndNode: (Node) -> Boolean,
     instructions: List<Char>,
-    nodes: List<Node>,
+    nodeMap: Map<String, Node>,
     withLogging: Boolean = false
-): Int {
-    val nodeMap = nodes.associateBy { it.name }
+): Long {
     var currentNode = nodeMap[startNode]!!
-    var steps = 0
+    var steps = 0L
 
     while (true) {
         for (instruction in instructions) {
             if (withLogging) println("Step $steps: $currentNode")
 
-            if (currentNode.name == endNode) {
+            if (isEndNode(currentNode)) {
                 return steps
             }
             currentNode = when (instruction) {
@@ -98,8 +74,20 @@ fun getPuzzleInput(): List<String> {
     return File(fileUrl.toURI()).readLines()
 }
 
+fun gcd(a: Long, b: Long): Long {
+    return if (b == 0L) a else gcd(b, a % b)
+}
+
+fun lcm(a: Long, b: Long): Long {
+    return a / gcd(a, b) * b
+}
+
+fun List<Long>.lcm(): Long {
+    return this.reduce { acc, num -> lcm(acc, num) }
+}
+
+
+
 data class Node(val name: String, val left: String, val right: String) {
-    override fun toString(): String {
-        return "$name: ($left, $right)"
-    }
+    override fun toString() = "$name: ($left, $right)"
 }

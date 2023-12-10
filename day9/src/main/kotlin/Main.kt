@@ -9,7 +9,7 @@ import java.util.concurrent.Executors
 val myDispatcher = Executors.newFixedThreadPool(24).asCoroutineDispatcher()
 
 fun main() {
-    println("------ Advent of Code 2023 - Day 8 -----")
+    println("------ Advent of Code 2023 - Day 9 -----")
 
     val puzzleInput = getPuzzleInput()
     val sensorReadings = puzzleInput.map { SensorReading.fromString(it) }

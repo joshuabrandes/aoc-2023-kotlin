@@ -2,6 +2,7 @@ package org.example
 
 import org.example.Direction.*
 import java.io.File
+import java.util.*
 
 fun main() {
     println("------ Advent of Code 2023 - Day 10 -----")
@@ -24,31 +25,35 @@ fun main() {
 
 fun getNumberOfEnclosedTiles(map: List<List<Tile>>): Any {
     val loopCoordinates = findLoop(map, findStart(map))
-    val area = map
-        .mapIndexed { y, row ->
-            List(row.size) { x ->
-                when {
-                    x to y in loopCoordinates -> TileCategory.LOOP_BORDER
-                    !map.getTile(x to y).isPipe -> TileCategory.EMPTY
-                    else -> TileCategory.UNKNOWN
-                }
+
+    for (i in loopCoordinates.indices) {
+        val current = loopCoordinates[i]
+        val next = loopCoordinates[(i + 1) % loopCoordinates.size] // Nimm den nächsten Punkt, wickle am Ende zur ersten Koordinate zurück
+
+        // Markiere die inneren Felder basierend auf der aktuellen und der nächsten Koordinate
+        markInnerFields(map, current, next)
+    }
+
+    return countMarkedFields(map)
+}
+
+fun countMarkedFields(map: List<List<Tile>>): Int {
+    val mutableArea = map
+        .map { it.map { it.category } }
+        .map { it.toMutableList() }.toMutableList()
+
+    for (y in mutableArea.indices) {
+        for (x in mutableArea[y].indices) {
+            if (mutableArea[y][x] == TileCategory.INSIDE_LOOP) {
+                floodFill(mutableArea, x to y, TileCategory.UNKNOWN, TileCategory.INSIDE_LOOP)
             }
         }
-
-    val mutableArea = area.map { it.toMutableList() }.toMutableList()
-
-    mutableArea.forEach { row ->
-        row.forEach(::println)
     }
 
-    // Starte floodFill von einem Punkt außerhalb des Loops, z.B. (0,0)
-    floodFill(mutableArea, 0 to 0, TileCategory.EMPTY, TileCategory.OUTSIDE_LOOP)
-
-    mutableArea.forEach { row ->
-        row.forEach(::println)
+    return mutableArea.sumOf { row ->
+        row.count { it == TileCategory.INSIDE_LOOP }
     }
 
-    return mutableArea.sumOf { row -> row.count { it == TileCategory.UNKNOWN } }
 }
 
 fun floodFill(
@@ -57,20 +62,52 @@ fun floodFill(
     targetCategory: TileCategory,
     replacementCategory: TileCategory
 ) {
-    val (x, y) = startPosition
+    val queue: Queue<Pair<Int, Int>> = LinkedList()
+    val (startX, startY) = startPosition
+    queue.add(Pair(startX + 1, startY))
+    queue.add(Pair(startX - 1, startY))
+    queue.add(Pair(startX, startY + 1))
+    queue.add(Pair(startX, startY - 1))
 
-    // Prüfe, ob die Koordinaten innerhalb der Grenzen liegen und nicht Teil des Loops sind
-    if (x < 0 || x >= area[0].size || y < 0 || y >= area.size || area[y][x] != targetCategory) return
+    while (queue.isNotEmpty()) {
+        val (x, y) = queue.remove()
 
-    // Markiere das aktuelle Tile als außerhalb des Loops
-    area[y][x] = replacementCategory
+        if (x < 0 || x >= area[0].size || y < 0 || y >= area.size || area[y][x] != targetCategory) continue
 
-    // Wende den Algorithmus rekursiv auf die benachbarten Tiles an
-    floodFill(area, Pair(x + 1, y), targetCategory, replacementCategory)
-    floodFill(area, Pair(x - 1, y), targetCategory, replacementCategory)
-    floodFill(area, Pair(x, y + 1), targetCategory, replacementCategory)
-    floodFill(area, Pair(x, y - 1), targetCategory, replacementCategory)
+        area[y][x] = replacementCategory
+
+        queue.add(Pair(x + 1, y))
+        queue.add(Pair(x - 1, y))
+        queue.add(Pair(x, y + 1))
+        queue.add(Pair(x, y - 1))
+    }
 }
+
+
+fun markInnerFields(map: List<List<Tile>>, current: Pair<Int, Int>, next: Pair<Int, Int>) {
+    val (currentX, currentY) = current
+    val currentTile = map[currentY][currentX]
+
+    // Bestimme die Richtung, in der die inneren Felder liegen
+    val (dX, dY) = currentTile.getNextTilePositionDeltas()
+    val innerDirection = when (next) {
+        current.applyDirection(dX) -> dX
+        current.applyDirection(dY) -> dY
+        else -> throw Exception("Unexpected path")
+    }
+
+    // Berechne die Koordinaten des inneren Feldes basierend auf der inneren Richtung
+    val (deltaX, deltaY) = innerDirection.toDelta()
+    val innerX = currentX + deltaX
+    val innerY = currentY + deltaY
+
+    // Überprüfe, ob das innere Feld innerhalb der Grenzen des Rasters liegt
+    if (innerX in map[0].indices && innerY in map.indices) {
+        // Markiere das innere Feld
+        map[innerY][innerX].category = TileCategory.INSIDE_LOOP
+    }
+}
+
 
 
 fun getLoopLength(map: List<List<Tile>>): Int {
@@ -230,6 +267,8 @@ data class Tile(val pipeInfo: Char) {
     val isStart: Boolean = pipeInfo == 'S'
     val isPipe: Boolean = pipeInfo != '.'
 
+    var category: TileCategory = TileCategory.UNKNOWN
+
     fun getNextTilePositionDeltas(): Pair<Direction, Direction> {
         return when (pipeInfo) {
             '|' -> NORTH to SOUTH
@@ -256,13 +295,12 @@ enum class Direction {
 }
 
 enum class TileCategory {
-    EMPTY, LOOP_BORDER, OUTSIDE_LOOP, UNKNOWN;
+    LOOP_BORDER, INSIDE_LOOP, UNKNOWN;
 
     override fun toString(): String {
         return when (this) {
-            EMPTY -> "*"
             LOOP_BORDER -> "X"
-            OUTSIDE_LOOP -> "O"
+            INSIDE_LOOP -> "O"
             UNKNOWN -> "?"
         }
     }

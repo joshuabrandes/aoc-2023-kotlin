@@ -57,8 +57,18 @@ class MainKtTest {
     }
 
     @Test
-    fun `enclosed area should return 4`() {
-        val map = getExamplePart2()
+    fun `enclosed area should return 4 for example 2_1`() {
+        val map = getExamplePart2_1()
+            .map { it.toCharArray().map { Tile(it) } }
+
+        val enclosedArea = getNumberOfEnclosedTiles(map)
+
+        assertEquals(4, enclosedArea)
+    }
+
+    @Test
+    fun `enclosed area should return 4 for example 2_2`() {
+        val map = getExamplePart2_2()
             .map { it.toCharArray().map { Tile(it) } }
 
         val enclosedArea = getNumberOfEnclosedTiles(map)
@@ -76,7 +86,7 @@ class MainKtTest {
         )
     }
 
-    private fun getExamplePart2(): List<String> {
+    private fun getExamplePart2_1(): List<String> {
         return listOf(
             "...........",
             ".S-------7.",
@@ -87,6 +97,20 @@ class MainKtTest {
             ".|..|.|..|.",
             ".L--J.L--J.",
             "..........."
+        )
+    }
+
+    private fun getExamplePart2_2(): List<String> {
+        return listOf(
+            "..........",
+            ".S------7.",
+            ".|F----7|.",
+            ".||....||.",
+            ".||....||.",
+            ".|L-7F-J|.",
+            ".|..||..|.",
+            ".L--JL--J.",
+            ".........."
         )
     }
 }

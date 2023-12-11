@@ -1,239 +1,21 @@
 package org.example
 
-import org.example.Direction.*
 import java.io.File
 import java.util.*
+
+import org.example.Facing.*
+
 
 fun main() {
     println("------ Advent of Code 2023 - Day 10 -----")
 
     val puzzleInput = getPuzzleInput()
-    val map: List<List<Tile>> = puzzleInput
-        .map { it.toCharArray().map { symbol -> Tile(symbol) } }
+    val puzzleInputAsString = puzzleInput.joinToString("\n")
 
-    val loopLength = getLoopLength(map)
-
-    println("Task 1: Steps to furthest point: ${loopLength / 2}")
-
-    val numberOfEnclosedTiles = getNumberOfEnclosedTiles(map)
-
-    println("Task 2: Number of enclosed tiles: $numberOfEnclosedTiles")
-
+    println("Part 1: ${part1(puzzleInputAsString)}")
+    println("Part 2: ${part2(puzzleInputAsString)}")
 
     println("----------------------------------------")
-}
-
-fun getNumberOfEnclosedTiles(map: List<List<Tile>>): Any {
-    val loopCoordinates = findLoop(map, findStart(map))
-
-    for (i in loopCoordinates.indices) {
-        val current = loopCoordinates[i]
-        val next = loopCoordinates[(i + 1) % loopCoordinates.size] // Nimm den nächsten Punkt, wickle am Ende zur ersten Koordinate zurück
-
-        // Markiere die inneren Felder basierend auf der aktuellen und der nächsten Koordinate
-        markInnerFields(map, current, next)
-    }
-
-    return countMarkedFields(map)
-}
-
-fun countMarkedFields(map: List<List<Tile>>): Int {
-    val mutableArea = map
-        .map { it.map { it.category } }
-        .map { it.toMutableList() }.toMutableList()
-
-    for (y in mutableArea.indices) {
-        for (x in mutableArea[y].indices) {
-            if (mutableArea[y][x] == TileCategory.INSIDE_LOOP) {
-                floodFill(mutableArea, x to y, TileCategory.UNKNOWN, TileCategory.INSIDE_LOOP)
-            }
-        }
-    }
-
-    return mutableArea.sumOf { row ->
-        row.count { it == TileCategory.INSIDE_LOOP }
-    }
-
-}
-
-fun floodFill(
-    area: MutableList<MutableList<TileCategory>>,
-    startPosition: Pair<Int, Int>,
-    targetCategory: TileCategory,
-    replacementCategory: TileCategory
-) {
-    val queue: Queue<Pair<Int, Int>> = LinkedList()
-    val (startX, startY) = startPosition
-    queue.add(Pair(startX + 1, startY))
-    queue.add(Pair(startX - 1, startY))
-    queue.add(Pair(startX, startY + 1))
-    queue.add(Pair(startX, startY - 1))
-
-    while (queue.isNotEmpty()) {
-        val (x, y) = queue.remove()
-
-        if (x < 0 || x >= area[0].size || y < 0 || y >= area.size || area[y][x] != targetCategory) continue
-
-        area[y][x] = replacementCategory
-
-        queue.add(Pair(x + 1, y))
-        queue.add(Pair(x - 1, y))
-        queue.add(Pair(x, y + 1))
-        queue.add(Pair(x, y - 1))
-    }
-}
-
-
-fun markInnerFields(map: List<List<Tile>>, current: Pair<Int, Int>, next: Pair<Int, Int>) {
-    val (currentX, currentY) = current
-    val currentTile = map[currentY][currentX]
-
-    // Bestimme die Richtung, in der die inneren Felder liegen
-    val (dX, dY) = currentTile.getNextTilePositionDeltas()
-    val innerDirection = when (next) {
-        current.applyDirection(dX) -> dX
-        current.applyDirection(dY) -> dY
-        else -> throw Exception("Unexpected path")
-    }
-
-    // Berechne die Koordinaten des inneren Feldes basierend auf der inneren Richtung
-    val (deltaX, deltaY) = innerDirection.toDelta()
-    val innerX = currentX + deltaX
-    val innerY = currentY + deltaY
-
-    // Überprüfe, ob das innere Feld innerhalb der Grenzen des Rasters liegt
-    if (innerX in map[0].indices && innerY in map.indices) {
-        // Markiere das innere Feld
-        map[innerY][innerX].category = TileCategory.INSIDE_LOOP
-    }
-}
-
-
-
-fun getLoopLength(map: List<List<Tile>>): Int {
-    val startCoordinates = findStart(map)
-
-    return findLoop(map, startCoordinates).size
-}
-
-private fun findStart(map: List<List<Tile>>): Pair<Int, Int> {
-    var startCoordinates: Pair<Int, Int>? = null
-
-    for (y in map.indices) {
-        for (x in map[y].indices) {
-            if (map[y][x].isStart) {
-                startCoordinates = x to y
-            }
-        }
-    }
-
-    if (startCoordinates == null) {
-        throw Exception("No start tile found")
-    }
-    return startCoordinates
-}
-
-fun findLoop(map: List<List<Tile>>, startCoordinates: Pair<Int, Int>): List<Pair<Int, Int>> {
-    val potentialLoopStarts = mutableListOf<Pair<Int, Int>>()
-    val (x, y) = startCoordinates
-
-    if (x - 1 >= 0 && isConnectedPipe(map, x to y, x - 1 to y)) {
-        potentialLoopStarts.add(x - 1 to y)
-    }
-    if (x + 1 < map[y].size && isConnectedPipe(map, x to y, x + 1 to y)) {
-        potentialLoopStarts.add(x + 1 to y)
-    }
-    if (y - 1 >= 0 && isConnectedPipe(map, x to y, x to y - 1)) {
-        potentialLoopStarts.add(x to y - 1)
-    }
-    if (y + 1 < map.size && isConnectedPipe(map, x to y, x to y + 1)) {
-        potentialLoopStarts.add(x to y + 1)
-    }
-
-    if (potentialLoopStarts.isEmpty()) {
-        throw Exception("No loop found")
-    }
-
-    for (potentialLoopStart in potentialLoopStarts) {
-        val loop = evaluatePath(map, potentialLoopStart, startCoordinates)
-        if (loop.isNotEmpty()) {
-            return loop
-        }
-    }
-
-    throw Exception("No loop found")
-}
-
-fun isConnectedPipe(map: List<List<Tile>>, current: Pair<Int, Int>, target: Pair<Int, Int>): Boolean {
-    return if (!map.getTile(target).isPipe) {
-        false
-    } else if (map.getTile(target).isStart) {
-        true
-    } else {
-        arePipesConnected(map, current, target)
-    }
-}
-
-/**
- * returns empty list if no loop found
- */
-fun evaluatePath(
-    map: List<List<Tile>>,
-    potentialLoopStart: Pair<Int, Int>,
-    startCoordinates: Pair<Int, Int>
-): List<Pair<Int, Int>> {
-    var currentCoordinates = potentialLoopStart
-    val loopPath = mutableListOf<Pair<Int, Int>>()
-    loopPath.add(startCoordinates)
-
-    while (currentCoordinates != startCoordinates) {
-        loopPath.add(currentCoordinates)
-        val (x, y) = currentCoordinates
-        val (d1, d2) = map[y][x].getNextTilePositionDeltas()
-
-        val connectedPipes = listOf(d1, d2)
-            .map { currentCoordinates.applyDirection(it) }
-            .filter { isConnectedPipe(map, currentCoordinates, it) }
-
-        if (connectedPipes.size <= 1) {
-            return listOf()
-        } else {
-            currentCoordinates = getNextCoordinate(connectedPipes, map, loopPath)
-        }
-    }
-
-    return loopPath
-}
-
-private fun getNextCoordinate(
-    connectedPipes: List<Pair<Int, Int>>,
-    map: List<List<Tile>>,
-    loopPath: List<Pair<Int, Int>>
-): Pair<Int, Int> {
-    require(connectedPipes.size == 2)
-    return when {
-        map.getTile(connectedPipes[0]).isStart -> when {
-            connectedPipes[1] in loopPath -> connectedPipes[0]
-            else -> connectedPipes[1]
-        }
-
-        map.getTile(connectedPipes[1]).isStart -> when {
-            connectedPipes[0] in loopPath -> connectedPipes[1]
-            else -> connectedPipes[0]
-        }
-
-        connectedPipes[0] in loopPath -> connectedPipes[1]
-        connectedPipes[1] in loopPath -> connectedPipes[0]
-        else -> throw Exception("Unexpected path")
-    }
-}
-
-fun arePipesConnected(map: List<List<Tile>>, current: Pair<Int, Int>, target: Pair<Int, Int>): Boolean {
-    val targetDeltas = map.getTile(target).getNextTilePositionDeltas()
-
-    return listOf(targetDeltas.first, targetDeltas.second)
-        .map { target.applyDirection(it) }
-        .any { it == current }
 }
 
 fun getPuzzleInput(): List<String> {
@@ -241,67 +23,118 @@ fun getPuzzleInput(): List<String> {
     return File(fileUrl.toURI()).readLines()
 }
 
-fun List<List<Tile>>.getTile(position: Pair<Int, Int>): Tile {
-    val (x, y) = position
-    return this[y][x]
+private val UP = Vec2(0, -1)
+private val RIGHT = Vec2(1, 0)
+private val DOWN = Vec2(0, 1)
+private val LEFT = Vec2(-1, 0)
+
+enum class Facing(val dir: Vec2, val left: Vec2, val right: Vec2, val nextPipes: String) {
+    NORTH(dir = UP, left = LEFT, right = RIGHT, nextPipes = "|7F"),
+    EAST(dir = RIGHT, left = UP, right = DOWN, nextPipes = "-J7"),
+    SOUTH(dir = DOWN, left = RIGHT, right = LEFT, nextPipes = "|LJ"),
+    WEST(dir = LEFT, left = DOWN, right = UP, nextPipes = "-LF"),
 }
 
-fun Pair<Int, Int>.applyDirection(direction: Direction): Pair<Int, Int> {
-    val (x, y) = direction.toDelta()
-    return this.first + x to this.second + y
+private fun Char.nextFacing(facing: Facing) = when (this) {
+    '|' -> when (facing) {
+        NORTH, SOUTH -> facing
+        EAST, WEST -> illegalInput(facing)
+    }
+    '-' -> when (facing) {
+        EAST, WEST -> facing
+        NORTH, SOUTH -> illegalInput(facing)
+    }
+    'L' -> when (facing) {
+        SOUTH -> EAST
+        WEST -> NORTH
+        NORTH, EAST -> illegalInput(facing)
+    }
+    'J' -> when (facing) {
+        EAST -> NORTH
+        SOUTH -> WEST
+        NORTH, WEST -> illegalInput(facing)
+    }
+    '7' -> when (facing) {
+        NORTH -> WEST
+        EAST -> SOUTH
+        SOUTH, WEST -> illegalInput(facing)
+    }
+    'F' -> when (facing) {
+        NORTH -> EAST
+        WEST -> SOUTH
+        EAST, SOUTH -> illegalInput(facing)
+    }
+    else -> illegalInput(this)
 }
 
-/*
-    | is a vertical pipe connecting north and south.
-    - is a horizontal pipe connecting east and west.
-    L is a 90-degree bend connecting north and east.
-    J is a 90-degree bend connecting north and west.
-    7 is a 90-degree bend connecting south and west.
-    F is a 90-degree bend connecting south and east.
-    . is ground; there is no pipe in this tile.
-    S is the starting position of the animal; there is a pipe on this tile, but your sketch doesn't show what shape the pipe has.
+fun illegalInput(facing: Any): Facing {
+    error("Illegal input for facing $facing")
+}
 
- */
-data class Tile(val pipeInfo: Char) {
-
-    val isStart: Boolean = pipeInfo == 'S'
-    val isPipe: Boolean = pipeInfo != '.'
-
-    var category: TileCategory = TileCategory.UNKNOWN
-
-    fun getNextTilePositionDeltas(): Pair<Direction, Direction> {
-        return when (pipeInfo) {
-            '|' -> NORTH to SOUTH
-            '-' -> EAST to WEST
-            'L' -> NORTH to EAST
-            'J' -> NORTH to WEST
-            '7' -> SOUTH to WEST
-            'F' -> SOUTH to EAST
-            else -> NONE to NONE
+private fun findLoop(input: String): Map<Vec2, Set<Facing>> {
+    val grid = input.lines()
+    val s = run {
+        val sRow = grid.indexOfFirst { 'S' in it }
+        Vec2(x = grid[sRow].indexOf('S'), y = sRow)
+    }
+    outer@ for (f in Facing.entries) {
+        val loop = HashMap<Vec2, Set<Facing>>()
+        var facing = f
+        var pos = s + f.dir
+        while (true) {
+            when (val pipe = grid.getOrNull(pos.y)?.getOrNull(pos.x)) {
+                null -> continue@outer // out of grid, no loop
+                'S' -> {
+                    loop[pos] = setOf(f, facing)
+                    return loop
+                }
+                in facing.nextPipes -> {
+                    val before = facing
+                    facing = pipe.nextFacing(facing)
+                    loop[pos] = setOf(before, facing)
+                    pos += facing.dir
+                }
+                else -> continue@outer // pipe doesn't connect with previous, no loop
+            }
         }
     }
+    error("Did not find loop")
 }
 
-enum class Direction {
-    NORTH, EAST, SOUTH, WEST, NONE;
+fun part1(input: String) = findLoop(input).size / 2
 
-    fun toDelta() = when (this) {
-        NORTH -> 0 to -1
-        EAST -> 1 to 0
-        SOUTH -> 0 to 1
-        WEST -> -1 to 0
-        NONE -> 0 to 0
-    }
-}
-
-enum class TileCategory {
-    LOOP_BORDER, INSIDE_LOOP, UNKNOWN;
-
-    override fun toString(): String {
-        return when (this) {
-            LOOP_BORDER -> "X"
-            INSIDE_LOOP -> "O"
-            UNKNOWN -> "?"
+fun part2(input: String): Int {
+    val leftOfLoop = HashSet<Vec2>()
+    val rightOfLoop = HashSet<Vec2>()
+    var leftIsInfinite = false
+    var rightIsInfinite = false
+    val loop = findLoop(input)
+    val xs = loop.keys.minOf(Vec2::x)..loop.keys.maxOf(Vec2::x)
+    val ys = loop.keys.minOf(Vec2::y)..loop.keys.maxOf(Vec2::y)
+    for ((pos, facings) in loop) {
+        for (facing in facings) {
+            fun addAllNextToPos(left: Boolean) {
+                val lr = if (left) facing.left else facing.right
+                generateSequence(pos + lr, lr::plus)
+                    .map { pos -> Pair(pos, pos.x in xs && pos.y in ys) }
+                    .onEach { (_, inBounds) ->
+                        if (!inBounds) if (left) leftIsInfinite = true else rightIsInfinite = true
+                    }
+                    .takeWhile { (pos, inBounds) -> inBounds && pos !in loop.keys }
+                    .forEach { (pos, _) -> (if (left) leftOfLoop else rightOfLoop).add(pos) }
+            }
+            if (!leftIsInfinite) addAllNextToPos(left = true)
+            if (!rightIsInfinite) addAllNextToPos(left = false)
         }
     }
+    return when {
+        leftIsInfinite && rightIsInfinite -> error("Somehow, both sides of the loop enclose infinite tiles.")
+        leftIsInfinite -> rightOfLoop.size
+        rightIsInfinite -> leftOfLoop.size
+        else -> error("Somehow, both sides of the loop enclose a finite number of tiles.")
+    }
+}
+
+class Vec2(val x: Int, val y: Int) {
+    operator fun plus(other: Vec2) = Vec2(x + other.x, y + other.y)
 }
